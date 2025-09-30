@@ -8,11 +8,13 @@ import { prismaClient } from "@repo/db-package/client";
 
 
 const app = express();
+app.use(express.json());
 
 app.post("/signup", async (req, res) => {
 
     const parsedData = CreateUserSchema.safeParse(req.body);
     if (!parsedData.success) {
+        console.log(parsedData.error);
         res.json({
             message: "Incorrect inputs"
         })
@@ -31,21 +33,22 @@ app.post("/signup", async (req, res) => {
         })
     } catch (e) {
 
-        if(e instanceof Error && e.message.includes("Unique constraint failed on the fields: (`email`)")){
+        if (e instanceof Error && e.message.includes("Unique constraint failed on the fields: (`email`)")) {
             res.status(411).json({
                 message: "User with this email already exists"
             })
-        }else{
+        } else {
             res.status(500).json({
-                message:"Something went wrong"
+                error: console.log(e),
+                message: "Something went wrong"
             })
         }
-        
+
     }
 
 })
 
-app.post("/signin", async(req, res) => {
+app.post("/signin", async (req, res) => {
 
     const parsedData = SignInSchema.safeParse(req.body);
     if (!parsedData.success) {
@@ -56,12 +59,19 @@ app.post("/signin", async(req, res) => {
     }
 
     const user = await prismaClient.user.findFirst({
-        where:{
+        where: {
             email: parsedData.data.username,
             password: parsedData.data.password
 
         }
     })
+
+    if (!user) {
+        res.status(403).json({
+            message: "Not authenticated"
+        })
+        return;
+    }
 
     const userId = 1;
     const token = jwt.sign({
@@ -74,17 +84,42 @@ app.post("/signin", async(req, res) => {
 })
 
 app.post("/room", middleware, async (req, res) => {
-    const data = CreateRoomSchema.parse(req.body);
-    if (!data.success) {
+    const parsedData = CreateRoomSchema.safeParse(req.body);
+    if (!parsedData.success) {
+        console.log(parsedData.error);
         res.json({
             message: "Incorrect inputs"
         })
         return;
     }
 
-    res.json({
-        roomId: 12312
-    })
+    // @ts-ignore
+    const userId = req.userId;
+    try {
+        const room = await prismaClient.room.create({
+            data: {
+                slug: parsedData.data.roomName,
+                adminId: userId
+            }
+        })
+
+        res.json({
+            roomId: 12312
+        })
+
+    } catch (error) {
+        if(error instanceof Error && error.message.includes("Unique constraint failed on the fields: (`slug`)")){
+            res.status(411).json({
+                message: "Room with this name already exists"
+            })
+        }else{
+            res.status(500).json({
+                error: console.log(error),
+                message: "Something went wrong"
+            })
+        }
+    }
+
 
 })
 
