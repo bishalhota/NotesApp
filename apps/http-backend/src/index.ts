@@ -21,7 +21,7 @@ app.post("/signup", async (req, res) => {
         return;
     }
     try {
-        await prismaClient.user.create({
+        const user = await prismaClient.user.create({
             data: {
                 email: parsedData.data?.username,
                 password: parsedData.data.password,
@@ -29,7 +29,7 @@ app.post("/signup", async (req, res) => {
             }
         })
         res.json({
-            userId: "123"
+            userId: user.id
         })
     } catch (e) {
 
@@ -104,15 +104,15 @@ app.post("/room", middleware, async (req, res) => {
         })
 
         res.json({
-            roomId: 12312
+            roomId: room.id
         })
 
     } catch (error) {
-        if(error instanceof Error && error.message.includes("Unique constraint failed on the fields: (`slug`)")){
+        if (error instanceof Error && error.message.includes("Unique constraint failed on the fields: (`slug`)")) {
             res.status(411).json({
                 message: "Room with this name already exists"
             })
-        }else{
+        } else {
             res.status(500).json({
                 error: console.log(error),
                 message: "Something went wrong"
@@ -123,16 +123,16 @@ app.post("/room", middleware, async (req, res) => {
 
 })
 
-app.get("/chats/:roomId",async (req,res)=>{
+app.get("/chats/:roomId", async (req, res) => {
     const roomId = Number(req.params.roomId);
     const messages = await prismaClient.chat.findMany({
-        where:{
-            roomId:roomId
+        where: {
+            roomId: roomId
         },
-        orderBy:{
-            id:"desc"
+        orderBy: {
+            id: "desc"
         },
-        take:50
+        take: 50
     });
 
     res.json({
