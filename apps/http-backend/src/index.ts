@@ -147,6 +147,7 @@ app.get("/room/:slug", async (req, res) => {
              slug
         }
     });
+    
     res.json({
         room
     })
